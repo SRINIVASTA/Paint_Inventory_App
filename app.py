@@ -1,3 +1,4 @@
+import os  # single import at top
 import streamlit as st
 import pandas as pd
 from datetime import datetime
@@ -6,7 +7,6 @@ from user_auth import login_user, create_user
 import matplotlib.pyplot as plt
 from io import BytesIO
 from fpdf import FPDF
-import os  # single import at top
 
 init_db()
 conn = get_connection()
