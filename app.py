@@ -6,6 +6,7 @@ from user_auth import login_user, create_user
 import matplotlib.pyplot as plt
 from io import BytesIO
 from fpdf import FPDF
+import os  # single import at top
 
 init_db()
 conn = get_connection()
@@ -45,7 +46,7 @@ if "logged_in" not in st.session_state:
                 st.session_state.logged_in = True
                 st.session_state.username = user[1]
                 st.session_state.role = user[3]
-                st.experimental_rerun()
+                os._exit(0)   # force reload after login
             else:
                 st.error("Invalid credentials")
 else:
@@ -55,7 +56,7 @@ else:
 
     if st.sidebar.button("🔓 Logout"):
         st.session_state.clear()
-        st.experimental_rerun()
+        os._exit(0)  # force reload on logout
 
     pages = {
         'admin': ["Purchase", "Sale", "Inventory", "Accounting", "User Management", "Manage Data"],
@@ -72,8 +73,8 @@ else:
             supplier = st.text_input("Supplier")
             ptype = st.text_input("Paint Type")
             color = st.text_input("Color")
-            qty = st.number_input("Quantity (L)", 0.0)
-            cost = st.number_input("Unit Cost (₹)", 0.0)
+            qty = st.number_input("Quantity (L)", 0.0, step=0.1)
+            cost = st.number_input("Unit Cost (₹)", 0.0, step=0.1)
             if st.form_submit_button("Submit"):
                 total = qty * cost
                 conn.execute("INSERT INTO purchases VALUES (NULL,?,?,?,?,?,?,?)",
@@ -88,8 +89,8 @@ else:
             customer = st.text_input("Customer")
             ptype = st.text_input("Paint Type")
             color = st.text_input("Color")
-            qty = st.number_input("Quantity Sold (L)", 0.0)
-            price = st.number_input("Unit Price (₹)", 0.0)
+            qty = st.number_input("Quantity Sold (L)", 0.0, step=0.1)
+            price = st.number_input("Unit Price (₹)", 0.0, step=0.1)
             if st.form_submit_button("Submit"):
                 total = qty * price
                 conn.execute("INSERT INTO sales VALUES (NULL,?,?,?,?,?,?,?)",
@@ -140,6 +141,10 @@ else:
 
     def user_mgmt_page():
         st.header("👥 User Management")
+        # Show existing users
+        users_df = pd.read_sql("SELECT id, username, role FROM users", conn)
+        st.dataframe(users_df)
+
         with st.form("user_form"):
             new_user = st.text_input("New Username")
             new_pw = st.text_input("New Password", type="password")
@@ -147,6 +152,7 @@ else:
             if st.form_submit_button("Add User"):
                 if create_user(new_user, new_pw, new_role):
                     st.success("User created")
+                    os._exit(0)  # reload app to reflect changes
                 else:
                     st.error("Username exists or error occurred")
 
@@ -158,21 +164,24 @@ else:
         with tab1:
             df = pd.read_sql("SELECT * FROM purchases", conn)
             st.dataframe(df)
-            pid = st.number_input("Purchase ID to Delete", min_value=0)
-            if st.button("Delete Purchase"):
+            pid = st.number_input("Purchase ID to Delete", min_value=1, step=1, key='pid')
+            if st.button("Delete Purchase", key='del_purchase'):
                 conn.execute("DELETE FROM purchases WHERE id=?", (pid,))
                 conn.commit()
                 st.success(f"Deleted purchase ID {pid}")
+                os._exit(0)
 
         with tab2:
             df = pd.read_sql("SELECT * FROM sales", conn)
             st.dataframe(df)
-            sid = st.number_input("Sale ID to Delete", min_value=0)
-            if st.button("Delete Sale"):
+            sid = st.number_input("Sale ID to Delete", min_value=1, step=1, key='sid')
+            if st.button("Delete Sale", key='del_sale'):
                 conn.execute("DELETE FROM sales WHERE id=?", (sid,))
                 conn.commit()
                 st.success(f"Deleted sale ID {sid}")
+                os._exit(0)
 
+    # Show the selected page
     if choice == "Purchase":
         purchase_page()
     elif choice == "Sale":
